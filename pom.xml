@@ -1,0 +1,13 @@
+<dependencies>
+    <!-- Spring Boot Starter Web for building web applications -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!-- Jedis for Redis interactions -->
+    <dependency>
+        <groupId>redis.clients</groupId>
+        <artifactId>jedis</artifactId>
+        <version>3.7.0</version> <!-- Use the latest version -->
+    </dependency>
+</dependencies>
