@@ -1,52 +1,29 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+const { ServiceBusClient, DefaultAzureCredential } = require("@azure/service-bus");
 
-    <groupId>com.example</groupId>
-    <artifactId>redis-demo</artifactId>
-    <version>1.0-SNAPSHOT</version>
+const serviceBusNamespace = "cac-devna-service-bus";
+const queueName = "mymessage";
 
-    <properties>
-        <java.version>1.8</java.version>
-        <spring-boot.version>2.6.4</spring-boot.version>
-        <jedis.version>3.7.0</jedis.version>
-    </properties>
+const messageBody = "Hello from Node.js!";
 
-    <dependencies>
-        <!-- Spring Boot Starter Web for building web applications -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
-        <!-- Jedis for Redis interactions -->
-        <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
-            <version>${jedis.version}</version>
-        </dependency>
-    </dependencies>
+async function main() {
+  const credential = new DefaultAzureCredential();
 
-    <build>
-        <plugins>
-            <!-- Maven Compiler Plugin to set Java version -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-            </plugin>
-            <!-- Maven Spring Boot Plugin for packaging as an executable JAR -->
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${spring-boot.version}</version>
-            </plugin>
-        </plugins>
-    </build>
-</project>
+  const serviceBusClient = new ServiceBusClient(`sb://${serviceBusNamespace}.servicebus.windows.net`, credential);
+  const sender = serviceBusClient.createSender(queueName);
 
+  try {
+    const message = {
+      body: messageBody
+    };
+
+    await sender.sendMessages(message);
+    console.log("Message sent successfully!");
+  } finally {
+    await sender.close();
+    await serviceBusClient.close();
+  }
+}
+
+main().catch((err) => {
+  console.log("Error occurred:", err);
+});
