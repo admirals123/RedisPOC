@@ -1,54 +1,38 @@
-const { ManagedIdentityCredential } = require("@azure/identity");
-const { RedisCacheClient } = require("@azure/arm-redis");
+using System;
+using StackExchange.Redis;
+using Azure.Identity;
 
-async function main() {
-  // Create a ManagedIdentityCredential
-  const credential = new ManagedIdentityCredential();
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        Console.Write("Redis cache host name: ");
+        var cacheHostName = Console.ReadLine()?.Trim();
 
-  // Create a RedisCacheClient
-  const redisClient = new RedisCacheClient(credential, "<Your Azure subscription ID>");
+        Console.Write("'Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource: ");
+        var username = Console.ReadLine()?.Trim();
 
-  // Get the resource group name where your Redis Cache instance is located
-  const resourceGroupName = "<Your resource group name>";
+        Console.WriteLine("Connecting using TokenCredential...");
 
-  // Get the Redis Cache instance name
-  const cacheName = "<Your Redis Cache instance name>";
+        try
+        {
+            var configurationOptions = await ConfigurationOptions
+                .Parse($"{cacheHostName}:6380")
+                .ConfigureForAzureWithTokenCredentialAsync(username!, new DefaultAzureCredential());
 
-  // Get the keys for the Redis Cache instance
-  const keys = await redisClient.redis.listKeys(resourceGroupName, cacheName);
-
-  // Connect to Redis using the obtained keys
-  const redis = require("redis");
-  const redisOptions = {
-    port: 6380, // or your Redis port
-    host: "<Your Redis Cache hostname>.redis.cache.windows.net", // replace with your Redis Cache hostname
-    password: keys.primaryKey, // use the primary key
-    tls: { servername: "<Your Redis Cache hostname>.redis.cache.windows.net" } // replace with your Redis Cache hostname
-  };
-
-  const redisClient = redis.createClient(redisOptions);
-
-  // Example usage
-  redisClient.set("myKey", "myValue", (err, reply) => {
-    if (err) {
-      console.error("Error setting value:", err);
-    } else {
-      console.log("Value set successfully!");
+            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
+            
+            // LogTokenEvents(configurationOptions); // You can implement this method to log token-related events if needed
+            
+            var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions);
+            
+            // Use the connectionMultiplexer object to interact with Redis
+            Console.WriteLine("Connected successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to Redis: {ex.Message}");
+            // Handle the exception as needed
+        }
     }
-  });
-
-  redisClient.get("myKey", (err, value) => {
-    if (err) {
-      console.error("Error getting value:", err);
-    } else {
-      console.log("Retrieved value:", value);
-    }
-  });
-
-  // Close the Redis client when done
-  redisClient.quit();
 }
-
-main().catch((err) => {
-  console.error("Error:", err);
-});
