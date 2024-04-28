@@ -1,0 +1,54 @@
+const { ManagedIdentityCredential } = require("@azure/identity");
+const { RedisCacheClient } = require("@azure/arm-redis");
+
+async function main() {
+  // Create a ManagedIdentityCredential
+  const credential = new ManagedIdentityCredential();
+
+  // Create a RedisCacheClient
+  const redisClient = new RedisCacheClient(credential, "<Your Azure subscription ID>");
+
+  // Get the resource group name where your Redis Cache instance is located
+  const resourceGroupName = "<Your resource group name>";
+
+  // Get the Redis Cache instance name
+  const cacheName = "<Your Redis Cache instance name>";
+
+  // Get the keys for the Redis Cache instance
+  const keys = await redisClient.redis.listKeys(resourceGroupName, cacheName);
+
+  // Connect to Redis using the obtained keys
+  const redis = require("redis");
+  const redisOptions = {
+    port: 6380, // or your Redis port
+    host: "<Your Redis Cache hostname>.redis.cache.windows.net", // replace with your Redis Cache hostname
+    password: keys.primaryKey, // use the primary key
+    tls: { servername: "<Your Redis Cache hostname>.redis.cache.windows.net" } // replace with your Redis Cache hostname
+  };
+
+  const redisClient = redis.createClient(redisOptions);
+
+  // Example usage
+  redisClient.set("myKey", "myValue", (err, reply) => {
+    if (err) {
+      console.error("Error setting value:", err);
+    } else {
+      console.log("Value set successfully!");
+    }
+  });
+
+  redisClient.get("myKey", (err, value) => {
+    if (err) {
+      console.error("Error getting value:", err);
+    } else {
+      console.log("Retrieved value:", value);
+    }
+  });
+
+  // Close the Redis client when done
+  redisClient.quit();
+}
+
+main().catch((err) => {
+  console.error("Error:", err);
+});
