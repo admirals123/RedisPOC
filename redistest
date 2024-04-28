@@ -1,11 +1,44 @@
-Write("Redis cache host name: ");
-cacheHostName = ReadLine()?.Trim();
-Write("'Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
-var username = ReadLine()?.Trim();
+using System;
+using StackExchange.Redis;
+using Azure.Identity;
 
-Write("Connecting using TokenCredential...");
-configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithTokenCredentialAsync(username!, new DefaultAzureCredential());
-configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-LogTokenEvents(configurationOptions);
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        Console.Write("Redis cache host name: ");
+        var cacheHostName = Console.ReadLine()?.Trim();
 
-connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
+        Console.Write("'Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource: ");
+        var username = Console.ReadLine()?.Trim();
+
+        Console.WriteLine("Connecting using TokenCredential...");
+
+        try
+        {
+            var configurationOptions = new ConfigurationOptions
+            {
+                EndPoints = { $"{cacheHostName}.redis.cache.windows.net" },
+                Ssl = true,
+                Password = "<PRIMARY_ACCESS_KEY>", // You may need to replace this with the primary access key
+                // Optional: Configure other options as needed
+            };
+
+            // Authenticate using Azure AD credentials
+            var tokenCredential = new DefaultAzureCredential();
+            var token = await tokenCredential.GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { "https://redis.azure.com/.default" }));
+
+            configurationOptions.Token = token.Token;
+
+            var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions);
+            
+            // Use the connectionMultiplexer object to interact with Redis
+            Console.WriteLine("Connected successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to Redis: {ex.Message}");
+            // Handle the exception as needed
+        }
+    }
+}
