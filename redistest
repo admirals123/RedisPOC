@@ -16,14 +16,20 @@ class Program
 
         try
         {
-            var configurationOptions = await ConfigurationOptions
-                .Parse($"{cacheHostName}:6380")
-                .ConfigureForAzureWithTokenCredentialAsync(username!, new DefaultAzureCredential());
+            var configurationOptions = new ConfigurationOptions
+            {
+                EndPoints = { $"{cacheHostName}.redis.cache.windows.net" },
+                Ssl = true,
+                Password = "<PRIMARY_ACCESS_KEY>", // You may need to replace this with the primary access key
+                // Optional: Configure other options as needed
+            };
 
-            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            
-            // LogTokenEvents(configurationOptions); // You can implement this method to log token-related events if needed
-            
+            // Authenticate using Azure AD credentials
+            var tokenCredential = new DefaultAzureCredential();
+            var token = await tokenCredential.GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { "https://redis.azure.com/.default" }));
+
+            configurationOptions.Token = token.Token;
+
             var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions);
             
             // Use the connectionMultiplexer object to interact with Redis
